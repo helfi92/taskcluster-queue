@@ -124,6 +124,7 @@ var api = new API({
     'TaskDependency',     // data.TaskDependency instance
     'Provisioner',        // data.Provisioner instance
     'WorkerType',         // data.WorkerType instance
+    'Worker',             // data.Worker instance
     'publicBucket',       // bucket instance for public artifacts
     'privateBucket',      // bucket instance for private artifacts
     'blobStore',          // BlobStore for azure artifacts
@@ -1371,6 +1372,7 @@ api.declare({
     ),
     this.workerInfo.provisionerSeen(provisionerId),
     this.workerInfo.workerTypeSeen(provisionerId, workerType),
+    this.workerInfo.workerSeen(provisionerId, workerType, workerGroup, workerId),
   ]);
 
   return res.reply({
@@ -2082,6 +2084,50 @@ api.declare({
 
   if (workerTypes.continuation) {
     result.continuationToken = workerTypes.continuation;
+  }
+
+  return res.reply(result);
+});
+
+/** List all active workerGroup/workerId of a workerType */
+api.declare({
+  method:     'get',
+  route:      '/provisioners/:provisionerId/workerTypes/:workerType/workers',
+  query: {
+    continuationToken: /./,
+    limit: /^[0-9]+$/,
+  },
+  name:       'listWorkers',
+  stability:  API.stability.experimental,
+  // output:     'list-provisioners-response.json#',
+  title:      'Get a list of all active workerGroup/workerId of a workerType',
+  description: [
+    'Get a list of all active workerGroup/workerId of a workerType.',
+    '',
+    'The response is paged. If this end-point returns a `continuationToken`, you',
+    'should call the end-point again with the `continuationToken` as a query-string',
+    'option. By default this end-point will list up to 1000 provisioners in a single',
+    'page. You may limit this with the query-string parameter `limit`.',
+  ].join('\n'),
+}, async function(req, res) {
+  let continuation = req.query.continuationToken || null;
+  let limit = parseInt(req.query.limit || 1000, 10);
+
+  const provisionerId = req.params.provisionerId;
+  const workerType = req.params.workerType;
+  let workers = await this.Worker.scan({provisionerId, workerType}, {continuation, limit});
+  console.log('this.Worker.scan yields: ', workers);
+  let result = {
+    workers: workers.entries.map(worker => {
+      return {
+        workerGroup: worker.workerGroup,
+        workerId: worker.workerId,
+      };
+    }),
+  };
+
+  if (workers.continuation) {
+    result.continuationToken = workers.continuation;
   }
 
   return res.reply(result);
