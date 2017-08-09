@@ -2,7 +2,6 @@ suite('provisioners and worker-types', () => {
   var debug       = require('debug')('test:claim-work');
   var assert      = require('assert');
   var _           = require('lodash');
-  var slugid      = require('slugid');
   var Promise     = require('promise');
   var taskcluster = require('taskcluster-client');
   var assume      = require('assume');
@@ -34,14 +33,14 @@ suite('provisioners and worker-types', () => {
     assert(result.provisioners[0].provisionerId === 'prov1', 'expected prov1');
   });
 
-  test('provisionerSeen creates and updates a provisioner', async () => {
+  test('provisioner seen creates and updates a provisioner', async () => {
     const workerInfo = await helper.load('workerInfo', helper.loadOptions);
 
     await Promise.all([
-      workerInfo.provisionerSeen('prov2'),
-      workerInfo.provisionerSeen('prov2'),
+      workerInfo.seen('prov2'),
+      workerInfo.seen('prov2'),
     ]);
-    await workerInfo.provisionerSeen('prov2');
+    await workerInfo.seen('prov2');
 
     const result = await helper.queue.listProvisioners();
     assert(result.provisioners.length === 1, 'expected a provisioner');
@@ -73,15 +72,15 @@ suite('provisioners and worker-types', () => {
     const result = await helper.queue.listWorkerTypes('prov-A');
 
     assert(result.workerTypes.length === 1, 'expected workerTypes');
-    assert(result.workerTypes[0] === workerType, `expected ${workerType}`);
+    assert(result.workerTypes[0].workerType === workerType, `expected ${workerType}`);
   });
 
   test('list worker-types (limit and continuationToken)', async () => {
     const WorkerType = await helper.load('WorkerType', helper.loadOptions);
     const expires = new Date('3017-07-29');
 
-    await WorkerType.create({provisionerId: 'prov1', workerType: slugid.v4(), expires});
-    await WorkerType.create({provisionerId: 'prov1', workerType: slugid.v4(), expires});
+    await WorkerType.create({provisionerId: 'prov1', workerType: 'gecko-b-2-linux', expires});
+    await WorkerType.create({provisionerId: 'prov1', workerType: 'gecko-b-2-android', expires});
 
     let result = await helper.queue.listWorkerTypes('prov1', {limit: 1});
 
@@ -97,13 +96,13 @@ suite('provisioners and worker-types', () => {
     assert(result.workerTypes.length === 1);
   });
 
-  test('workerTypeSeen creates and updates a worker-type', async () => {
-    let workerInfo = await helper.load('workerInfo', helper.loadOptions);
-    let workerType = 'gecko-b-2-linux';
+  test('worker-type seen creates and updates a worker-type', async () => {
+    const workerInfo = await helper.load('workerInfo', helper.loadOptions);
+    const workerType = 'gecko-b-2-linux';
 
     await Promise.all([
-      workerInfo.workerTypeSeen('prov2', workerType),
-      workerInfo.workerTypeSeen('prov2', workerType),
+      workerInfo.seen('prov2', workerType),
+      workerInfo.seen('prov2', workerType),
     ]);
 
     const result = await helper.queue.listWorkerTypes('prov2');
@@ -113,7 +112,7 @@ suite('provisioners and worker-types', () => {
   test('worker-type expiration works', async () => {
     const WorkerType = await helper.load('WorkerType', helper.loadOptions);
 
-    await WorkerType.create({provisionerId: 'prov1', workerType: slugid.v4(), expires: new Date('1017-07-29')});
+    await WorkerType.create({provisionerId: 'prov1', workerType: 'gecko-b-2-linux', expires: new Date('1017-07-29')});
     await helper.expireWorkerInfo();
 
     const result = await helper.queue.listWorkerTypes('prov1');
@@ -122,6 +121,7 @@ suite('provisioners and worker-types', () => {
 
   test('queue.listWorkers returns an empty list', async () => {
     const result = await helper.queue.listWorkers('prov1', 'gecko-b-2-linux');
+
     assert(result.workers.length === 0, 'Did not expect any workers');
   });
 
@@ -171,8 +171,8 @@ suite('provisioners and worker-types', () => {
     const workerId = 'my-worker';
 
     await Promise.all([
-      workerInfo.workerSeen(provisionerId, workerType, workerGroup, workerId),
-      workerInfo.workerSeen(provisionerId, workerType, workerGroup, workerId),
+      workerInfo.seen(provisionerId, workerType, workerGroup, workerId),
+      workerInfo.seen(provisionerId, workerType, workerGroup, workerId),
     ]);
 
     const result = await helper.queue.listWorkers(provisionerId, workerType);

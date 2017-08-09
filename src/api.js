@@ -1370,9 +1370,7 @@ api.declare({
     this.workClaimer.claim(
       provisionerId, workerType, workerGroup, workerId, count, aborted,
     ),
-    this.workerInfo.provisionerSeen(provisionerId),
-    this.workerInfo.workerTypeSeen(provisionerId, workerType),
-    this.workerInfo.workerSeen(provisionerId, workerType, workerGroup, workerId),
+    this.workerInfo.seen(provisionerId, workerType, workerGroup, workerId),
   ]);
 
   return res.reply({
@@ -1451,7 +1449,7 @@ api.declare({
     this.workClaimer.claimTask(
       taskId, runId, workerGroup, workerId, task,
     ),
-    this.workerInfo.provisionerSeen(task.provisionerId),
+    this.workerInfo.seen(task.provisionerId),
   ]);
 
   // If the run doesn't exist return ResourceNotFound
@@ -2003,11 +2001,11 @@ api.declare({
     'page. You may limit this with the query-string parameter `limit`.',
   ].join('\n'),
 }, async function(req, res) {
-  let continuation = req.query.continuationToken || null;
-  let limit = parseInt(req.query.limit || 1000, 10);
+  const continuation = req.query.continuationToken || null;
+  const limit = Math.min(1000, parseInt(req.query.limit || 1000, 10));
 
-  let provisioners = await this.Provisioner.scan({}, {continuation, limit});
-  let result = {
+  const provisioners = await this.Provisioner.scan({}, {continuation, limit});
+  const result = {
     provisioners: provisioners.entries.map(provisioner => provisioner.json()),
   };
   if (provisioners.continuation) {
@@ -2072,14 +2070,13 @@ api.declare({
     'page. You may limit this with the query-string parameter `limit`.',
   ].join('\n'),
 }, async function(req, res) {
-  let continuation = req.query.continuationToken || null;
-  let limit = parseInt(req.query.limit || 1000, 10);
-
+  const continuation = req.query.continuationToken || null;
   const provisionerId = req.params.provisionerId;
-  let workerTypes = await this.WorkerType.scan({provisionerId}, {continuation, limit});
+  const limit = Math.min(1000, parseInt(req.query.limit || 1000, 10));
 
-  let result = {
-    workerTypes: workerTypes.entries.map(workerType => workerType.workerType),
+  const workerTypes = await this.WorkerType.scan({provisionerId}, {continuation, limit});
+  const result = {
+    workerTypes: workerTypes.entries.map(workerType => ({workerType: workerType.workerType})),
   };
 
   if (workerTypes.continuation) {
@@ -2110,14 +2107,13 @@ api.declare({
     'page. You may limit this with the query-string parameter `limit`.',
   ].join('\n'),
 }, async function(req, res) {
-  let continuation = req.query.continuationToken || null;
-  let limit = parseInt(req.query.limit || 1000, 10);
-
+  const continuation = req.query.continuationToken || null;
   const provisionerId = req.params.provisionerId;
   const workerType = req.params.workerType;
-  let workers = await this.Worker.scan({provisionerId, workerType}, {continuation, limit});
-  console.log('this.Worker.scan yields: ', workers);
-  let result = {
+  const limit = Math.min(1000, parseInt(req.query.limit || 1000, 10));
+
+  const workers = await this.Worker.scan({provisionerId, workerType}, {continuation, limit});
+  const result = {
     workers: workers.entries.map(worker => {
       return {
         workerGroup: worker.workerGroup,
