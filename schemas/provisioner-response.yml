@@ -1,0 +1,37 @@
+$schema:  http://json-schema.org/draft-04/schema#
+title:          "Provisioner Response"
+description: |
+  Response to an attempt to request data from a provisioner.
+type:           object
+properties:
+  provisionerId:
+    title:        "Provisioner ID"
+    type:         string
+    minLength:    {$const: identifier-min-length}
+    maxLength:    {$const: identifier-max-length}
+    pattern:      {$const: identifier-pattern}
+  stability:
+    title:        "Stability"
+    description: |
+      This is the stability of the provisioner. Accepted values:
+      'experimental|stable|deprecated'
+    type:         string
+    enum:         ["experimental", "stable", "deprecated"]
+  description:
+    title:        "Description"
+    description: |
+      Description of the provisioner.
+    type:         string
+  expires:
+    title:        "Provisioner Expiration"
+    description: |
+      Date and time after which the provisioner created will be automatically
+      deleted by the queue.
+    type:         string
+    format:       date-time
+additionalProperties: true
+required:
+  - provisionerId
+  - description
+  - stability
+  - expires

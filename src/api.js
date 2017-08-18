@@ -2016,6 +2016,73 @@ api.declare({
   return res.reply(result);
 });
 
+/** Get a provisioner */
+api.declare({
+  method:     'get',
+  route:      '/provisioners/:provisionerId',
+  name:       'getProvisioner',
+  stability:  API.stability.experimental,
+  output:     'provisioner-response.json#',
+  title:      'Get an active provisioner',
+  description: [
+    'Get an active provisioner.',
+    '',
+    'The term "provisioner" is taken broadly to mean anything with a provisionerId.',
+    'This does not necessarily mean there is an associated service performing any',
+    'provisioning activity.',
+  ].join('\n'),
+}, async function(req, res) {
+  const provisionerId = req.params.provisionerId;
+  const provisioner = await this.Provisioner.scan({provisionerId});
+  const result = provisioner.entries.length ? provisioner.entries[0].json() : {};
+
+  return provisioner.entries.length ?
+    res.reply(result) :
+    res.reportError('ResourceNotFound',
+      'Provisioner {{provisionerId}} not found. Are you sure it was created?', {
+        provisionerId,
+      },
+    );
+});
+
+/** Update a provisioner */
+api.declare({
+  method:     'put',
+  route:      '/provisioners/:provisionerId',
+  name:       'updateProvisioner',
+  stability:  API.stability.experimental,
+  output:     'provisioner-response.json#',
+  input:      'update-provisioner-request.json#',
+  title:      'Update a provisioner',
+  description: [
+    'Update a provisioner.',
+    '',
+    'The term "provisioner" is taken broadly to mean anything with a provisionerId.',
+    'This does not necessarily mean there is an associated service performing any',
+    'provisioning activity.',
+  ].join('\n'),
+}, async function(req, res) {
+  const provisionerId = req.params.provisionerId;
+  const prov = await this.Provisioner.load({provisionerId}, true);
+
+  if (!prov) {
+    res.reportError('ResourceNotFound',
+      'Provisioner {{provisionerId}} not found. Are you sure it was created?', {
+        provisionerId,
+      },
+    );
+  }
+
+  const {stability, description, expires} = req.body;
+  const result = await prov.modify((entity) => {
+    entity.stability = stability;
+    entity.description = description;
+    entity.expires = new Date(expires ? expires : prov.expires);
+  });
+
+  return res.reply(result.json());
+});
+
 /** Count pending tasks for workerType */
 api.declare({
   method:     'get',

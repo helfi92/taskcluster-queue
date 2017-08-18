@@ -203,4 +203,46 @@ suite('provisioners and worker-types', () => {
     const result = await helper.queue.listWorkers(provisionerId, workerType);
     assert(result.workers.length === 0, 'expected no workers');
   });
+
+  test('queue.getProvisioner returns a provisioner', async () => {
+    const Provisioner = await helper.load('Provisioner', helper.loadOptions);
+    const provisioner = {
+      provisionerId: 'prov1',
+      expires: new Date('3017-07-29'),
+      description: 'test-provisioner',
+      stability: 'experimental',
+    };
+
+    await Provisioner.create(provisioner);
+
+    const result = await helper.queue.getProvisioner(provisioner.provisionerId);
+
+    assert(result.provisionerId === provisioner.provisionerId, 'expected prov1');
+    assert(result.description === provisioner.description, 'expected description');
+    assert(result.stability === provisioner.stability, 'expected stability');
+  });
+
+  test('queue.updateProvisioner updates a provisioner', async () => {
+    const Provisioner = await helper.load('Provisioner', helper.loadOptions);
+
+    const provisioner = await Provisioner.create({
+      provisionerId: 'prov1',
+      expires: new Date('3017-07-29'),
+      description: 'test-provisioner',
+      stability: 'experimental',
+    });
+
+    const updateQueries = {
+      description: 'desc-provisioner',
+      stability: 'stable',
+    };
+
+    await helper.queue.updateProvisioner(provisioner.provisionerId, updateQueries);
+
+    const result = await helper.queue.getProvisioner('prov1');
+
+    assert(result.provisionerId === provisioner.provisionerId, `expected ${provisioner.provisionerId}`);
+    assert(result.description === updateQueries.description, `expected ${updateQueries.description}`);
+    assert(result.stability === updateQueries.stability, `expected ${updateQueries.stability}`);
+  });
 });
